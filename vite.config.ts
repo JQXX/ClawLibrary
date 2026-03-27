@@ -357,9 +357,13 @@ function telemetryMiddleware() {
         res.setHeader('Cache-Control', 'no-store');
         res.end(file);
       } catch (error) {
-        res.statusCode = 500;
+        const notFound = (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+        res.statusCode = notFound ? 404 : 500;
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+        res.end(JSON.stringify({
+          ok: false,
+          error: notFound ? 'file not found' : error instanceof Error ? error.message : String(error)
+        }));
       }
       return;
     }
@@ -402,9 +406,13 @@ function telemetryMiddleware() {
           readMode: preview.readMode
         }));
       } catch (error) {
-        res.statusCode = 500;
+        const notFound = (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+        res.statusCode = notFound ? 404 : 500;
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+        res.end(JSON.stringify({
+          ok: false,
+          error: notFound ? 'file not found' : error instanceof Error ? error.message : String(error)
+        }));
       }
       return;
     }

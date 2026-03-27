@@ -332,6 +332,19 @@ async function ensureResourceDetail(resourceId: ResourcePartitionId): Promise<vo
   await Promise.all(detailIds.map((id) => loadResourceDetail(id)));
 }
 
+function invalidateResourceDetail(resourceId: ResourcePartitionId): void {
+  for (const id of detailResourceIdsFor(resourceId)) {
+    resourceDetailLoadedById.delete(id);
+    resourceDetailItemsById.delete(id);
+    resourceDetailErrorsById.delete(id);
+  }
+}
+
+async function reloadResourceDetail(resourceId: ResourcePartitionId): Promise<void> {
+  invalidateResourceDetail(resourceId);
+  await ensureResourceDetail(resourceId);
+}
+
 function resourcesForUi(): OpenClawSnapshot['resources'] {
   if (!lastSnapshot) {
     return [];
@@ -2416,6 +2429,7 @@ async function openPreviewForItem(item: OpenClawResourceItem): Promise<void> {
     return;
   }
   const kind = previewKindOfPath(previewPath);
+  const currentResourceId = selectedResourceId ? uiResourceId(selectedResourceId) : null;
 
   const requestId = ++previewRequestId;
   previewState = {
@@ -2468,12 +2482,47 @@ async function openPreviewForItem(item: OpenClawResourceItem): Promise<void> {
     if (requestId !== previewRequestId) {
       return;
     }
-    previewState = {
-      status: 'error',
-      item,
-      payload: null,
-      error: error instanceof Error ? error.message : String(error)
-    };
+
+    const message = error instanceof Error ? error.message : String(error);
+    if ((message.includes('status 404') || message.includes('file not found')) && currentResourceId) {
+      try {
+        await reloadResourceDetail(currentResourceId);
+        if (requestId !== previewRequestId) {
+          return;
+        }
+        renderRoomModal();
+        setModalFeedback(
+          uiLocale === 'zh'
+            ? '这个文件刚刚被删除或移动了，当前房间列表已刷新。'
+            : 'This file was deleted or moved. The current room list has been refreshed.',
+          'error'
+        );
+        previewState = {
+          status: 'error',
+          item,
+          payload: null,
+          error: uiLocale === 'zh'
+            ? '该文件已不存在，已同步当前房间的最新列表。'
+            : 'This file no longer exists. The room list has been synced to the latest state.'
+        };
+      } catch {
+        previewState = {
+          status: 'error',
+          item,
+          payload: null,
+          error: uiLocale === 'zh'
+            ? '该文件已不存在，而且当前房间刷新失败。你现在看到的可能还是缓存数据。'
+            : 'This file no longer exists, and refreshing the current room failed. You may still be seeing cached data.'
+        };
+      }
+    } else {
+      previewState = {
+        status: 'error',
+        item,
+        payload: null,
+        error: message
+      };
+    }
   }
   renderPreviewModal();
 }
