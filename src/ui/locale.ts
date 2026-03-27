@@ -68,7 +68,14 @@ export const UI_TEXT = {
   active: { en: 'Active', zh: '活跃' },
   idle: { en: 'Idle', zh: '空闲' },
   alert: { en: 'Alert', zh: '告警' },
-  offline: { en: 'Offline', zh: '离线' }
+  offline: { en: 'Offline', zh: '离线' },
+  channels: { en: 'Channels', zh: '通信渠道' },
+  directChat: { en: 'Direct Chat', zh: '私聊' },
+  groupChat: { en: 'Group Chat', zh: '群聊' },
+  thread: { en: 'Thread', zh: '话题' },
+  channel: { en: 'Channel', zh: '渠道' },
+  scheduled: { en: 'Scheduled', zh: '定时' },
+  unknownChannel: { en: 'Unknown Channel', zh: '未知渠道' }
 } as const;
 
 export function resourceLabel(id: string, locale: UiLocale): string {

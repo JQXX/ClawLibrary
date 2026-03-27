@@ -500,6 +500,7 @@ function kindMenuLabelForResource(resourceId: ResourcePartitionId, kindId: strin
   }
 
   if (resourceId === 'gateway') {
+    if (kindId === 'Channels') return uiLocale === 'zh' ? '通信渠道' : 'Channels';
     if (kindId === 'Queue Status') return uiLocale === 'zh' ? '队列' : 'Queue';
     if (kindId === 'Connections') return uiLocale === 'zh' ? '连接' : 'Connect';
   }
@@ -1253,7 +1254,7 @@ function kindOrderForResource(resourceId: ResourcePartitionId): string[] {
     return ['Daily Notes', 'Core Memory', 'Finance Memory', 'Memory Notes'];
   }
   if (resourceId === 'gateway') {
-    return ['Queue Status', 'Runtime', 'Connections', 'Providers', 'Devices', 'Auth', 'Models', 'Config', 'MCP'];
+    return ['Channels', 'Queue Status', 'Runtime', 'Connections', 'Providers', 'Devices', 'Auth', 'Models', 'Config', 'MCP'];
   }
   if (resourceId === 'agent') {
     return ['Parallel Runs', 'Sessions', 'Subagent Runs', 'Task Status', 'Agent State'];
@@ -1331,6 +1332,7 @@ function itemKindGroupOf(resourceId: ResourcePartitionId, entry: OpenClawResourc
   }
 
   if (resourceId === 'gateway') {
+    if (metaValue.includes('channel')) return 'Channels';
     if (metaValue.includes('queue') || metaValue.includes('task') || metaValue.includes('delivery')) return 'Queue Status';
     if (metaValue.includes('runtime') || metaValue.includes('session') || metaValue.includes('run')) return 'Runtime';
     if (metaValue.includes('connection')) return 'Connections';

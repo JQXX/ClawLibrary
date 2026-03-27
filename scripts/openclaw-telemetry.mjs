@@ -530,7 +530,9 @@ function summarizeSessionKey(sessionKey) {
   if (raw === 'agent:main:main') {
     return {
       title: 'Main Session',
-      excerpt: 'interactive local main-agent session'
+      excerpt: 'interactive local main-agent session',
+      channel: 'Local',
+      channelKind: 'Main'
     };
   }
 
@@ -538,41 +540,89 @@ function summarizeSessionKey(sessionKey) {
   if (parts.includes('telegram') && topicIndex !== -1 && parts[topicIndex + 1]) {
     return {
       title: `Telegram Topic ${parts[topicIndex + 1]}`,
-      excerpt: `telegram group session · topic ${parts[topicIndex + 1]}`
+      excerpt: `telegram group session · topic ${parts[topicIndex + 1]}`,
+      channel: 'Telegram',
+      channelKind: 'Topic'
     };
   }
 
   if (parts.includes('telegram') && parts.includes('slash')) {
     return {
       title: 'Telegram Slash',
-      excerpt: `telegram slash session · ${parts.at(-1) || 'direct'}`
+      excerpt: `telegram slash session · ${parts.at(-1) || 'direct'}`,
+      channel: 'Telegram',
+      channelKind: 'Slash'
     };
   }
 
   if (parts.includes('telegram') && parts.includes('group')) {
     return {
       title: 'Telegram Group',
-      excerpt: `telegram group session · ${parts.at(-1) || 'group'}`
+      excerpt: `telegram group session · ${parts.at(-1) || 'group'}`,
+      channel: 'Telegram',
+      channelKind: 'Group Chat'
+    };
+  }
+
+  if (parts.includes('feishu')) {
+    return {
+      title: 'Feishu Direct',
+      excerpt: `feishu session · ${parts.at(-1) || 'direct'}`,
+      channel: 'Feishu',
+      channelKind: parts.includes('group') ? 'Group Chat' : 'Direct Chat'
+    };
+  }
+
+  if (parts.includes('discord')) {
+    return {
+      title: 'Discord Session',
+      excerpt: `discord session · ${parts.at(-1) || 'channel'}`,
+      channel: 'Discord',
+      channelKind: parts.includes('thread') ? 'Thread' : 'Channel'
+    };
+  }
+
+  if (parts.includes('signal')) {
+    return {
+      title: 'Signal Session',
+      excerpt: `signal session · ${parts.at(-1) || 'direct'}`,
+      channel: 'Signal',
+      channelKind: parts.includes('group') ? 'Group Chat' : 'Direct Chat'
+    };
+  }
+
+  if (parts.includes('imessage')) {
+    return {
+      title: 'iMessage Session',
+      excerpt: `imessage session · ${parts.at(-1) || 'direct'}`,
+      channel: 'iMessage',
+      channelKind: parts.includes('group') ? 'Group Chat' : 'Direct Chat'
     };
   }
 
   if (parts.includes('cron')) {
     return {
       title: 'Cron Session',
-      excerpt: `scheduled agent run · ${(parts.at(-1) || '').slice(0, 8)}`
+      excerpt: `scheduled agent run · ${(parts.at(-1) || '').slice(0, 8)}`,
+      channel: 'Cron',
+      channelKind: 'Scheduled'
     };
   }
 
   if (parts.includes('codex')) {
     return {
       title: 'Codex Session',
-      excerpt: raw.replace(/:/g, ' · ').slice(0, 180)
+      excerpt: raw.replace(/:/g, ' · ').slice(0, 180),
+      channel: 'Codex',
+      channelKind: 'Agent'
     };
   }
 
   return {
     title: 'Agent Session',
-    excerpt: raw.replace(/:/g, ' · ').slice(0, 180)
+    excerpt: raw.replace(/:/g, ' · ').slice(0, 180),
+    channel: 'Unknown',
+    channelKind: 'Session'
   };
 }
 
@@ -1679,6 +1729,30 @@ async function buildLiveResources({ itemResourceIds = null, includeExcerpt = tru
   const codexSessions = await safeJsonRead(codexSessionIndexPath, {});
   const mainSessionCount = Object.keys(mainSessions || {}).length;
   const codexSessionCount = Object.keys(codexSessions || {}).length;
+  const channelSessionItems = Object.entries(mainSessions || {})
+    .map(([sessionKey, info]) => {
+      if (!info || typeof info !== 'object') {
+        return null;
+      }
+      const summary = summarizeSessionKey(sessionKey);
+      if (!summary.channel || summary.channel === 'Local' || summary.channel === 'Unknown') {
+        return null;
+      }
+      const updatedAt = Number(info.updatedAt || info.lastUpdatedAt || 0) || gatewayScan.latestMs;
+      const next = item(
+        `gateway-channel-${sessionKey}`,
+        `${summary.channel} · ${summary.channelKind}`,
+        '.openclaw/agents/main/sessions/sessions.json',
+        updatedAt,
+        'channel'
+      );
+      next.excerpt = `${summary.excerpt} · recent session route`;
+      next.stats = [
+        { label: 'channel', value: summary.channel, tone: 'active' }
+      ];
+      return next;
+    })
+    .filter(Boolean);
 
   // Infer context usage from the most-recently-updated main-agent session
   const mainActorContext = (() => {
@@ -2027,6 +2101,7 @@ async function buildLiveResources({ itemResourceIds = null, includeExcerpt = tru
   ];
   const gatewayMergedItems = [
     ...gatewayItems,
+    ...channelSessionItems,
     ...workspaceGatewayConfigItems,
     ...gatewayMcpItems,
     ...gatewayRuntimeItems,
