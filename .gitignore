@@ -13,6 +13,7 @@ npm-debug.log*
 yarn-*.log*
 pnpm-debug.log*
 *.log
+.clawlibrary-dev.pid
 .idea/
 .vscode/
 docs/qa/
