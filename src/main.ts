@@ -1465,7 +1465,16 @@ function resourceSummaryEntries(resource: OpenClawSnapshot['resources'][number])
     }));
   }
 
-  if (resource.id === 'gateway' || resource.id === 'mcp') {
+  if (resource.id === 'gateway') {
+    return groups.slice(0, 6).map((group) => ({
+      id: group.id,
+      label: kindMenuLabelForResource(resource.id, group.id),
+      value: String(group.count),
+      color: summaryColor(group.id)
+    }));
+  }
+
+  if (resource.id === 'mcp') {
     return groups.slice(0, 4).map((group) => ({
       id: group.id,
       label: kindMenuLabelForResource(resource.id, group.id),
