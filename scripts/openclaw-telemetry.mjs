@@ -573,6 +573,15 @@ function summarizeSessionKey(sessionKey) {
     };
   }
 
+  if (parts.includes('openclaw-weixin') || parts.includes('weixin')) {
+    return {
+      title: 'WeChat Session',
+      excerpt: `weixin session · ${parts.at(-1) || 'direct'}`,
+      channel: 'WeChat',
+      channelKind: parts.includes('group') ? 'Group Chat' : 'Direct Chat'
+    };
+  }
+
   if (parts.includes('discord')) {
     return {
       title: 'Discord Session',
@@ -1729,13 +1738,14 @@ async function buildLiveResources({ itemResourceIds = null, includeExcerpt = tru
   const codexSessions = await safeJsonRead(codexSessionIndexPath, {});
   const mainSessionCount = Object.keys(mainSessions || {}).length;
   const codexSessionCount = Object.keys(codexSessions || {}).length;
+  const IM_CHANNELS = new Set(['Feishu', 'Telegram', 'Discord', 'Signal', 'iMessage', 'WeChat']);
   const channelSessionItems = Object.entries(mainSessions || {})
     .map(([sessionKey, info]) => {
       if (!info || typeof info !== 'object') {
         return null;
       }
       const summary = summarizeSessionKey(sessionKey);
-      if (!summary.channel || summary.channel === 'Local' || summary.channel === 'Unknown') {
+      if (!summary.channel || !IM_CHANNELS.has(summary.channel)) {
         return null;
       }
       const updatedAt = Number(info.updatedAt || info.lastUpdatedAt || 0) || gatewayScan.latestMs;

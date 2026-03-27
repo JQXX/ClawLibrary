@@ -75,7 +75,8 @@ export const UI_TEXT = {
   thread: { en: 'Thread', zh: '话题' },
   channel: { en: 'Channel', zh: '渠道' },
   scheduled: { en: 'Scheduled', zh: '定时' },
-  unknownChannel: { en: 'Unknown Channel', zh: '未知渠道' }
+  unknownChannel: { en: 'Unknown Channel', zh: '未知渠道' },
+  weChat: { en: 'WeChat', zh: '微信' }
 } as const;
 
 export function resourceLabel(id: string, locale: UiLocale): string {
