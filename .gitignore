@@ -14,6 +14,7 @@ yarn-*.log*
 pnpm-debug.log*
 *.log
 .clawlibrary-dev.pid
+.clawlibrary-stable.pid
 .idea/
 .vscode/
 docs/qa/

@@ -1839,7 +1839,7 @@ export class LibraryScene extends Phaser.Scene {
     // Speed scales with context remaining: full HP = 0.32, near-empty = 0.098 (sub-agent speed)
     const maxSpeed = 0.32;
     const minSpeed = 0.098;
-    const hp = this.lobsterContextRemaining; // 0–1
+    const hp = this.lobsterContextRemaining ?? 0; // 0-1
     const speedPerMs = minSpeed + (maxSpeed - minSpeed) * hp;
     const step = speedPerMs * deltaMs;
 
