@@ -31,7 +31,7 @@ case "$MODE" in
     ;;
   *)
     echo "Unknown mode: $MODE"
-    echo "Usage: $0 [stable|dev] {start|stop|restart|status|logs}"
+    echo "Usage: $0 [stable|dev] {start|stop|restart|status|logs|doctor}"
     exit 1
     ;;
 esac
@@ -47,16 +47,51 @@ is_running() {
   return 1
 }
 
+check_http() {
+  python3 - <<PY
+import urllib.request
+url = 'http://127.0.0.1:${PORT}/'
+try:
+    with urllib.request.urlopen(url, timeout=3) as r:
+        print(f'http ok status={r.status} url={url}')
+except Exception as e:
+    print(f'http fail url={url} error={e!r}')
+PY
+}
+
+explain_failure() {
+  echo "ClawLibrary $MODE server failed to start."
+  if [[ "$MODE" == "stable" ]]; then
+    echo "Likely causes:"
+    echo "- build failed (TypeScript / Vite error)"
+    echo "- preview process crashed immediately"
+    echo "- port $PORT is already occupied"
+  else
+    echo "Likely causes:"
+    echo "- vite dev process crashed immediately"
+    echo "- port $PORT is already occupied"
+  fi
+  echo "Check logs: $OUT_LOG and $ERR_LOG"
+  echo "Quick doctor: ./scripts/clawlibrary-server.sh $MODE doctor"
+}
+
 start() {
   if is_running; then
     echo "ClawLibrary $MODE server already running (PID $(cat "$PID_FILE"))"
+    check_http || true
     return 0
   fi
 
   cd "$ROOT_DIR"
+  : > "$OUT_LOG"
+  : > "$ERR_LOG"
+
   if [[ ${#PRE_START_CMD[@]} -gt 0 ]]; then
-    echo "Building before starting stable server..."
-    "${PRE_START_CMD[@]}"
+    echo "Building before starting $MODE server..."
+    if ! "${PRE_START_CMD[@]}" 2>&1 | tee -a "$OUT_LOG"; then
+      explain_failure
+      return 1
+    fi
   fi
 
   nohup "${START_CMD[@]}" >>"$OUT_LOG" 2>>"$ERR_LOG" &
@@ -68,9 +103,10 @@ start() {
     echo "ClawLibrary $MODE server started (PID $pid)"
     echo "URL: http://100.83.211.12:$PORT/"
     echo "Logs: $OUT_LOG / $ERR_LOG"
+    check_http || true
   else
-    echo "Failed to start ClawLibrary $MODE server"
     rm -f "$PID_FILE"
+    explain_failure
     return 1
   fi
 }
@@ -96,6 +132,7 @@ stop() {
 status() {
   if is_running; then
     echo "running mode=$MODE pid=$(cat "$PID_FILE") url=http://100.83.211.12:$PORT/"
+    check_http || true
   else
     echo "stopped mode=$MODE"
     return 1
@@ -103,7 +140,22 @@ status() {
 }
 
 logs() {
-  tail -n 80 "$OUT_LOG" "$ERR_LOG" 2>/dev/null || true
+  tail -n 120 "$OUT_LOG" "$ERR_LOG" 2>/dev/null || true
+}
+
+doctor() {
+  echo "== ClawLibrary doctor: $MODE =="
+  echo "root=$ROOT_DIR"
+  echo "pid_file=$PID_FILE"
+  echo "port=$PORT"
+  if is_running; then
+    echo "process=running pid=$(cat "$PID_FILE")"
+  else
+    echo "process=stopped"
+  fi
+  check_http || true
+  echo "--- last logs ---"
+  tail -n 60 "$OUT_LOG" "$ERR_LOG" 2>/dev/null || true
 }
 
 case "$ACTION" in
@@ -112,8 +164,9 @@ case "$ACTION" in
   restart) stop || true; start ;;
   status) status ;;
   logs) logs ;;
+  doctor) doctor ;;
   *)
-    echo "Usage: $0 [stable|dev] {start|stop|restart|status|logs}"
+    echo "Usage: $0 [stable|dev] {start|stop|restart|status|logs|doctor}"
     exit 1
     ;;
 esac
